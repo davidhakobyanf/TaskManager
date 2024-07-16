@@ -37,7 +37,7 @@ import DataApi from '../../api/api.js';
 const Task = () => {
     const [tasks, setTasks] = useState([]);
     const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Low', progress: 0 });
-    const [editTask, setEditTask] = useState({ index: -1, title: '', description: '', priority: 'Low', progress: 0 });
+    const [editTask, setEditTask] = useState({ id: '', title: '', description: '', priority: 'Low', progress: 0 });
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -87,9 +87,9 @@ const Task = () => {
 
     const handleOpenAddDialog = () => setAddDialogOpen(true);
     const handleCloseAddDialog = () => setAddDialogOpen(false);
-    const handleOpenEditDialog = (index) => {
-        const task = tasks[index];
-        setEditTask({ index, ...task });
+    const handleOpenEditDialog = (taskId) => {
+        const task = tasks.find((task) => task.id === taskId);
+        setEditTask({ ...task });
         setEditDialogOpen(true);
     };
     const handleCloseEditDialog = () => setEditDialogOpen(false);
@@ -114,8 +114,7 @@ const Task = () => {
                 ...editTask,
                 progress: editTask.progress,
             };
-            const newTasks = [...tasks];
-            newTasks[editTask.index] = updatedTask;
+            const newTasks = tasks.map((task) => (task.id === editTask.id ? updatedTask : task));
             setTasks(newTasks);
             updateTask(updatedTask);
             handleCloseEditDialog();
@@ -132,12 +131,10 @@ const Task = () => {
         }
     };
 
-    const handleToggleComplete = (index) => {
-        const newTasks = [...tasks];
-        newTasks[index] = {
-            ...newTasks[index],
-            completed: !newTasks[index].completed,
-        };
+    const handleToggleComplete = (taskId) => {
+        const newTasks = tasks.map((task) =>
+            task.id === taskId ? { ...task, completed: !task.completed } : task
+        );
         setTasks(newTasks);
     };
 
@@ -196,12 +193,12 @@ const Task = () => {
                                 {filteredTasks
                                     .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
                                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                    .map((task, index) => (
+                                    .map((task) => (
                                         <TableRow key={task.id} style={{ textDecoration: task.completed ? 'line-through' : 'none' }}>
                                             <TableCell>
                                                 <Checkbox
                                                     checked={task.completed || false}  // Ensure task.completed is defined
-                                                    onChange={() => handleToggleComplete(index)}
+                                                    onChange={() => handleToggleComplete(task.id)}
                                                 />
                                             </TableCell>
                                             <TableCell>{task.title}</TableCell>
@@ -216,7 +213,7 @@ const Task = () => {
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <IconButton edge="end" aria-label="edit" onClick={() => handleOpenEditDialog(index)}>
+                                                <IconButton edge="end" aria-label="edit" onClick={() => handleOpenEditDialog(task.id)}>
                                                     <EditIcon />
                                                 </IconButton>
                                                 <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteTask(task.id)}>
