@@ -6,24 +6,21 @@ Welcome to Task Manager, a simple and effective way to manage your tasks.
 
 Task Manager is designed to help you manage your tasks efficiently. Here are the key features:
 
-### Manage your tasks
-
+### Manage Your Tasks
 Easily add, update, and delete tasks. Track your progress with visual indicators.
 
 ### Stay Organized
-
 Prioritize your tasks so you can focus on what's most important. Stay on top of your workload.
 
-### Connect with us
-
+### Connect with Us
 Have questions or feedback? Contact us via our contact page. We're here to help!
 
 ## Project Structure
 
 The project is organized into two main directories:
 
-1. **client**: This directory contains the client-side code built using the React library.
-2. **server**: This directory contains the server-side code which provides a REST API using Node.js and MongoDB.
+1. **client**: Contains the client-side code built using the React library.
+2. **server**: Contains the server-side code which provides a REST API using Node.js and MongoDB.
 
 ## Getting Started
 
