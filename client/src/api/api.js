@@ -9,16 +9,23 @@ const instance = axios.create({
 });
 
 class DataApi {
-    static async getAllTasks() {
+    static async fetchTasks() {
         try {
-            const response = await instance.get('/');
-            return response.data;
+
+            const response = await instance.get('/', {
+                headers: {
+                    'Authorization': `Bearer `,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            return response;
         } catch (error) {
-            console.error('Error fetching tasks:', error);
-            throw new Error('Failed to fetch tasks');
+            console.error(error);
+            // Handle the error as needed, or rethrow it if further handling is required.
+            throw error;
         }
     }
-
     static async addTask(task) {
         try {
             const headers = {
@@ -47,11 +54,27 @@ class DataApi {
 
     static async deleteTask(id) {
         try {
-            const response = await instance.delete(`/${id}`);
-            return response.data;
+            const headers = {
+                Authorization: `Bearer`,
+                'Content-Type': 'application/json',
+            };
+            const response = await instance.request({
+                url: '/',
+                method: 'delete',
+                headers,
+                data: {
+                    id: id,
+                },
+            });
+
+            console.log(`"${id}"`,'id')
+            console.log(response,'response')
+
+            return response;
         } catch (error) {
-            console.error('Error deleting task:', error);
-            throw new Error('Failed to delete task');
+            console.error(error);
+            // Handle the error as needed, or rethrow it if further handling is required.
+            throw error;
         }
     }
 }

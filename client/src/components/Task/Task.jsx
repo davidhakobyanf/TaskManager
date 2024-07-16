@@ -37,27 +37,30 @@ import DataApi from '../../api/api.js';
 const Task = () => {
     const [tasks, setTasks] = useState([]);
     const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Low', progress: 0 });
-    const [editTask, setEditTask] = useState({ id: '', title: '', description: '', priority: 'Low', progress: 0 });
+    const [editTask, setEditTask] = useState({ title: '', description: '', priority: 'Low', progress: 0 });
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const isMobile = window.innerWidth <= 600;
 
     useEffect(() => {
-        const fetchTasks = async () => {
-            try {
-                const fetchedTasks = await DataApi.getAllTasks();
-                setTasks(fetchedTasks);
-            } catch (error) {
-                console.error('Error fetching tasks:', error);
-            }
-        };
-        fetchTasks();
-    }, []);
+        fetchTasks()
+    }, [isAddDialogOpen,isEditDialogOpen,isDeleteDialogOpen]);
 
-    const [fetchTask, loadingTask, errorTask] = useFetching(async (newTask) => {
+    const fetchTasks = async () => {
+        try {
+            const { data: res } = await DataApi.fetchTasks();
+            if (res) {
+                setTasks(res);
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        }
+    };
+    const [addTask, loadingTask, errorTask] = useFetching(async (newTask) => {
         try {
             const { data: res } = await DataApi.addTask(newTask);
             console.log(res, 'Response after adding task');
@@ -77,9 +80,12 @@ const Task = () => {
 
     const [deleteTask, loadingDelete, errorDelete] = useFetching(async (taskIdToDelete) => {
         try {
-            await DataApi.deleteTask(taskIdToDelete);
+            const { data: res } = await DataApi.deleteTask(taskIdToDelete);
+            if (res) {
+                console.log(res, 'res');
+            }
         } catch (error) {
-            console.error('Error deleting task:', error);
+            console.error('Error fetching profile:', error);
         }
     });
 
@@ -102,7 +108,7 @@ const Task = () => {
                 progress: newTask.progress,
             };
             setTasks([...tasks, taskToAdd]);
-            fetchTask(taskToAdd);
+            addTask(taskToAdd);
             setNewTask({ title: '', description: '', priority: 'Low', progress: 0 });
             handleCloseAddDialog();
         }
@@ -114,18 +120,16 @@ const Task = () => {
                 ...editTask,
                 progress: editTask.progress,
             };
-            const newTasks = tasks.map((task) => (task.id === editTask.id ? updatedTask : task));
-            setTasks(newTasks);
             updateTask(updatedTask);
             handleCloseEditDialog();
         }
     };
 
     const handleDeleteTask = async (taskIdToDelete) => {
+        console.log(taskIdToDelete,'task_id')
+        setDeleteDialogOpen(!isDeleteDialogOpen);
         try {
             await deleteTask(taskIdToDelete);
-            const newTasks = tasks.filter((task) => task.id !== taskIdToDelete);
-            setTasks(newTasks);
         } catch (error) {
             console.error('Error deleting task:', error);
         }

@@ -8,5 +8,6 @@ taskRoute
     .post(task.createTask)
     .put(task.updateTask)
     .get(task.getAllTasks)
+    .delete(task.deleteTask);
 
 module.exports = taskRoute;
