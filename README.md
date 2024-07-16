@@ -37,7 +37,7 @@ Make sure you have the following installed:
 
 1. Clone the repository:
     ```sh
-    git clone <repository_url>
+    git clone https://github.com/davidhakobyanf/TaskManager.git
     ```
 2. Navigate to the project directory:
     ```sh
