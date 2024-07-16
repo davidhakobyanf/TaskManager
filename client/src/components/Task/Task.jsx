@@ -38,6 +38,7 @@ const Task = () => {
     const [tasks, setTasks] = useState([]);
     const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Low', progress: 0 });
     const [editTask, setEditTask] = useState({ title: '', description: '', priority: 'Low', progress: 0 });
+    const [taskToDelete, setTaskToDelete] = useState(null);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -47,8 +48,8 @@ const Task = () => {
     const isMobile = window.innerWidth <= 600;
 
     useEffect(() => {
-        fetchTasks()
-    }, [isAddDialogOpen,isEditDialogOpen,isDeleteDialogOpen]);
+        fetchTasks();
+    }, [isAddDialogOpen, isEditDialogOpen, isDeleteDialogOpen]);
 
     const fetchTasks = async () => {
         try {
@@ -60,6 +61,7 @@ const Task = () => {
             console.error('Error fetching profile:', error);
         }
     };
+
     const [addTask, loadingTask, errorTask] = useFetching(async (newTask) => {
         try {
             const { data: res } = await DataApi.addTask(newTask);
@@ -125,13 +127,26 @@ const Task = () => {
         }
     };
 
-    const handleDeleteTask = async (taskIdToDelete) => {
-        console.log(taskIdToDelete,'task_id')
-        setDeleteDialogOpen(!isDeleteDialogOpen);
-        try {
-            await deleteTask(taskIdToDelete);
-        } catch (error) {
-            console.error('Error deleting task:', error);
+    const handleOpenDeleteDialog = (taskId) => {
+        const task = tasks.find((task) => task.id === taskId);
+        setTaskToDelete(task);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        setTaskToDelete(null);
+        setDeleteDialogOpen(false);
+    };
+
+    const handleDeleteTask = async () => {
+        if (taskToDelete) {
+            try {
+                await deleteTask(taskToDelete.id);
+                setTaskToDelete(null);
+                setDeleteDialogOpen(false);
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
         }
     };
 
@@ -220,7 +235,7 @@ const Task = () => {
                                                 <IconButton edge="end" aria-label="edit" onClick={() => handleOpenEditDialog(task.id)}>
                                                     <EditIcon />
                                                 </IconButton>
-                                                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteTask(task.id)}>
+                                                <IconButton edge="end" aria-label="delete" onClick={() => handleOpenDeleteDialog(task.id)}>
                                                     <DeleteIcon />
                                                 </IconButton>
                                             </TableCell>
@@ -244,14 +259,11 @@ const Task = () => {
             <Dialog fullScreen={isMobile} open={isAddDialogOpen} onClose={handleCloseAddDialog}>
                 <DialogTitle>Add Task</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        Please enter the title, description, priority, and progress for the new task.
-                    </DialogContentText>
+                    <DialogContentText>To add a new task, please fill out the form below.</DialogContentText>
                     <TextField
                         autoFocus
                         margin="dense"
                         label="Title"
-                        type="text"
                         fullWidth
                         value={newTask.title}
                         onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
@@ -259,15 +271,15 @@ const Task = () => {
                     <TextField
                         margin="dense"
                         label="Description"
-                        type="text"
                         fullWidth
+                        multiline
+                        rows={4}
                         value={newTask.description}
                         onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                     />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="priority-label">Priority</InputLabel>
+                    <FormControl fullWidth margin="dense">
+                        <InputLabel>Priority</InputLabel>
                         <Select
-                            labelId="priority-label"
                             value={newTask.priority}
                             onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
                         >
@@ -276,40 +288,30 @@ const Task = () => {
                             <MenuItem value="High">High</MenuItem>
                         </Select>
                     </FormControl>
-                    <Box margin="dense">
+                    <Box mt={2}>
                         <Typography gutterBottom>Progress</Typography>
                         <Slider
                             value={newTask.progress}
-                            onChange={(e, newValue) => setNewTask({ ...newTask, progress: newValue })}
+                            onChange={(e, value) => setNewTask({ ...newTask, progress: value })}
+                            aria-labelledby="progress-slider"
                             valueLabelDisplay="auto"
-                            step={10}
-                            marks
-                            min={0}
-                            max={100}
                         />
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseAddDialog} color="primary">
-                        Cancel
-                    </Button>
-                    <Button onClick={handleAddTask} color="primary">
-                        Add
-                    </Button>
+                    <Button onClick={handleCloseAddDialog} color="primary">Cancel</Button>
+                    <Button onClick={handleAddTask} color="primary">Add</Button>
                 </DialogActions>
             </Dialog>
             {/* Edit Task Dialog */}
             <Dialog fullScreen={isMobile} open={isEditDialogOpen} onClose={handleCloseEditDialog}>
                 <DialogTitle>Edit Task</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        Please update the title, description, priority, and progress for the task.
-                    </DialogContentText>
+                    <DialogContentText>To edit the task, please modify the form below.</DialogContentText>
                     <TextField
                         autoFocus
                         margin="dense"
                         label="Title"
-                        type="text"
                         fullWidth
                         value={editTask.title}
                         onChange={(e) => setEditTask({ ...editTask, title: e.target.value })}
@@ -317,15 +319,15 @@ const Task = () => {
                     <TextField
                         margin="dense"
                         label="Description"
-                        type="text"
                         fullWidth
+                        multiline
+                        rows={4}
                         value={editTask.description}
                         onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
                     />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="priority-label">Priority</InputLabel>
+                    <FormControl fullWidth margin="dense">
+                        <InputLabel>Priority</InputLabel>
                         <Select
-                            labelId="priority-label"
                             value={editTask.priority}
                             onChange={(e) => setEditTask({ ...editTask, priority: e.target.value })}
                         >
@@ -334,26 +336,32 @@ const Task = () => {
                             <MenuItem value="High">High</MenuItem>
                         </Select>
                     </FormControl>
-                    <Box margin="dense">
+                    <Box mt={2}>
                         <Typography gutterBottom>Progress</Typography>
                         <Slider
                             value={editTask.progress}
-                            onChange={(e, newValue) => setEditTask({ ...editTask, progress: newValue })}
+                            onChange={(e, value) => setEditTask({ ...editTask, progress: value })}
+                            aria-labelledby="progress-slider"
                             valueLabelDisplay="auto"
-                            step={10}
-                            marks
-                            min={0}
-                            max={100}
                         />
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseEditDialog} color="primary">
-                        Cancel
-                    </Button>
-                    <Button onClick={handleUpdateTask} color="primary">
-                        Update
-                    </Button>
+                    <Button onClick={handleCloseEditDialog} color="primary">Cancel</Button>
+                    <Button onClick={handleUpdateTask} color="primary">Update</Button>
+                </DialogActions>
+            </Dialog>
+            {/* Delete Task Dialog */}
+            <Dialog open={isDeleteDialogOpen} onClose={handleCloseDeleteDialog}>
+                <DialogTitle>Delete Task</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete the task titled '{taskToDelete?.title}'?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDeleteDialog} color="primary">Cancel</Button>
+                    <Button onClick={handleDeleteTask} color="primary">Delete</Button>
                 </DialogActions>
             </Dialog>
         </div>
