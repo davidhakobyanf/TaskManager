@@ -22,7 +22,19 @@ class DataApi {
             console.error(error);
         }
     }
-
+    static async fetchContacts() {
+        try {
+            const response = await instance.get('/contact', {
+                headers: {
+                    'Authorization': `Bearer `,
+                    'Content-Type': 'application/json',
+                },
+            });
+            return response;
+        } catch (error) {
+            console.error(error);
+        }
+    }
     static async addTask(task) {
         try {
             const headers = {
@@ -39,7 +51,7 @@ class DataApi {
             const headers = {
                 'Content-Type': 'application/json',
             };
-            const response = await instance.post('/', contact, { headers });
+            const response = await instance.post('/contact', contact, { headers });
             return response; // Return the full response
         } catch (error) {
             console.error('Error adding task:', error);
