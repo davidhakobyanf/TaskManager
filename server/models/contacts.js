@@ -21,4 +21,12 @@ module.exports = class Contact {
             res.status(500).json({ error: 'Error creating task' });
         }
     }
+    async getAllContacts(req, res) {
+        try {
+            const contacts = await db.collection('Contacts').find().toArray();
+            res.status(200).json(contacts);
+        } catch (error) {
+            res.status(500).json({ error: 'Error fetching contacts' });
+        }
+    }
 }

@@ -34,6 +34,17 @@ class DataApi {
             console.error('Error adding task:', error);
         }
     }
+    static async addContact(contact) {
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            const response = await instance.post('/', contact, { headers });
+            return response; // Return the full response
+        } catch (error) {
+            console.error('Error adding task:', error);
+        }
+    }
 
     static async updateTask(task) {
         try {

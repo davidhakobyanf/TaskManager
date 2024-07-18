@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useReducer, useState} from 'react';
 import {
   Container,
   Grid,
@@ -8,8 +8,22 @@ import {
   Paper,
   Box,
 } from '@mui/material';
+import {useFetching} from "../../hoc/fetchingHook";
+import DataApi from "../../api/api";
+import { message } from 'antd';
+
+
+const contactReducer = (state,action) => {
+  switch (action.type){
+    case 'ADD_CONTACT':
+      return {...state, contacts:[...state.contacts,action.payload]};
+  }
+}
 
 const Contact = () => {
+  const [state, dispatch] = useReducer(contactReducer, { contacts: [] });
+  const [messageApi, contextHolder] = message.useMessage();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,6 +33,34 @@ const Contact = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+  const [addContact, loadingContact, errorContact] = useFetching(async (newContact) => {
+    try {
+      const res = await DataApi.addTask(newContact);
+      if (res && res.status === 201) { // Assuming 201 Created status for successful task addition
+        dispatch({ type: 'ADD_CONTACT', payload: newContact });
+        successMessage('Task added successfully!');
+      } else {
+        errorMessage();
+      }
+    } catch (error) {
+      console.error(error);
+      errorMessage();
+    }
+  });
+
+  const successMessage = (content) => {
+    messageApi.open({
+      type: 'success',
+      content,
+    });
+  };
+
+  const errorMessage = () => {
+    messageApi.open({
+      type: 'error',
+      content: 'An error occurred. Please try again.',
+    });
   };
 
   const handleSubmit = (e) => {
