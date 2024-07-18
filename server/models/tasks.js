@@ -9,8 +9,8 @@ connectToDb((error) => {
 
 module.exports = class Task {
   async createTask(req, res) {
-    const { id, title, description, priority, progress } = req.body;
-    const task = { id, title, description, priority, progress };
+    const { id, title, description, priority, progress,checked } = req.body;
+    const task = { id, title, description, priority, progress,checked };
     try {
       await db.collection('Tasks').insertOne(task);
       res.status(201).json({ message: 'Task created successfully' });
@@ -20,7 +20,7 @@ module.exports = class Task {
   }
 
   async updateTask(req, res) {
-    const { id, title, description, priority, progress } = req.body;
+    const { id, title, description, priority, progress,checked } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: 'ID is required to update a task' });
@@ -29,7 +29,7 @@ module.exports = class Task {
     try {
       const result = await db.collection('Tasks').updateOne(
         { id: id },
-        { $set: { title, description, priority, progress } }
+        { $set: { title, description, priority, progress,checked } }
       );
 
       if (result.matchedCount === 0) {
