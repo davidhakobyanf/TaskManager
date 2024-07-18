@@ -43,29 +43,6 @@ const Contact = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const addContact = async () => {
-    const { name, email, message } = formData;
-    const newContact = { name, email, message };
-
-    try {
-      const existingContact = state.contacts.find((contact) => contact.email === email);
-      if (existingContact) {
-        errorMessage('There is already an account with this email.');
-        return;
-      }
-
-      const res = await DataApi.addContact(newContact);
-      if (res && res.status === 201) {
-        dispatch({ type: 'ADD_CONTACT', payload: newContact });
-        successMessage('Contact added successfully!');
-      } else {
-        errorMessage('An error occurred. Please try again.');
-      }
-    } catch (error) {
-      console.error(error);
-      errorMessage('An error occurred. Please try again.');
-    }
-  };
 
   const fetchContacts = async () => {
     try {
