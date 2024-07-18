@@ -11,31 +11,27 @@ const instance = axios.create({
 class DataApi {
     static async fetchTasks() {
         try {
-
             const response = await instance.get('/', {
                 headers: {
                     'Authorization': `Bearer `,
                     'Content-Type': 'application/json',
                 },
             });
-
             return response;
         } catch (error) {
             console.error(error);
-            // Handle the error as needed, or rethrow it if further handling is required.
-            throw error;
         }
     }
+
     static async addTask(task) {
         try {
             const headers = {
                 'Content-Type': 'application/json',
             };
             const response = await instance.post('/', task, { headers });
-            return response.data;
+            return response; // Return the full response
         } catch (error) {
             console.error('Error adding task:', error);
-            throw new Error('Failed to add task');
         }
     }
 
@@ -45,10 +41,9 @@ class DataApi {
                 'Content-Type': 'application/json',
             };
             const response = await instance.put('/', task, { headers });
-            return response.data;
+            return response; // Return the full response
         } catch (error) {
             console.error('Error updating task:', error);
-            throw new Error('Failed to update task');
         }
     }
 
@@ -66,14 +61,9 @@ class DataApi {
                     id: id,
                 },
             });
-
-            console.log(`"${id}"`,'id')
-            console.log(response,'response')
-
             return response;
         } catch (error) {
             console.error(error);
-            // Handle the error as needed, or rethrow it if further handling is required.
             throw error;
         }
     }

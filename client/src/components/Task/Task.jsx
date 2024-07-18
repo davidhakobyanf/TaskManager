@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useReducer, useEffect, useState } from 'react';
 import {
     Button,
     Checkbox,
@@ -8,7 +8,6 @@ import {
     DialogContentText,
     DialogTitle,
     FormControl,
-    IconButton,
     InputLabel,
     LinearProgress,
     MenuItem,
@@ -27,15 +26,39 @@ import {
     Box,
     Card,
     CardContent,
-    CardActions,
+    IconButton
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
 import { v4 as uuidv4 } from 'uuid';
 import { useFetching } from '../../hoc/fetchingHook';
 import DataApi from '../../api/api.js';
+import { message } from 'antd';
+
+const taskReducer = (state, action) => {
+    switch (action.type) {
+        case 'SET_TASKS':
+            return { ...state, tasks: action.payload };
+        case 'ADD_TASK':
+            return { ...state, tasks: [...state.tasks, action.payload] };
+        case 'UPDATE_TASK':
+            return {
+                ...state,
+                tasks: state.tasks.map((task) =>
+                    task.id === action.payload.id ? action.payload : task
+                )
+            };
+        case 'DELETE_TASK':
+            return {
+                ...state,
+                tasks: state.tasks.filter((task) => task.id !== action.payload)
+            };
+        default:
+            return state;
+    }
+};
 
 const Task = () => {
-    const [tasks, setTasks] = useState([]);
+    const [state, dispatch] = useReducer(taskReducer, { tasks: [] });
     const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Low', progress: 0, checked: false });
     const [editTask, setEditTask] = useState({ title: '', description: '', priority: 'Low', progress: 0, checked: false });
     const [taskToDelete, setTaskToDelete] = useState(null);
@@ -47,6 +70,8 @@ const Task = () => {
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const isMobile = window.innerWidth <= 600;
 
+    const [messageApi, contextHolder] = message.useMessage();
+
     useEffect(() => {
         fetchTasks();
     }, [isAddDialogOpen, isEditDialogOpen, isDeleteDialogOpen]);
@@ -55,48 +80,80 @@ const Task = () => {
         try {
             const { data: res } = await DataApi.fetchTasks();
             if (res) {
-                setTasks(res);
+                dispatch({ type: 'SET_TASKS', payload: res });
             }
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error('Error fetching tasks:', error);
+            errorMessage();
         }
     };
 
     const [addTask, loadingTask, errorTask] = useFetching(async (newTask) => {
         try {
-            const { data: res } = await DataApi.addTask(newTask);
-            console.log(res, 'Response after adding task');
+            const res = await DataApi.addTask(newTask);
+            if (res && res.status === 201) { // Assuming 201 Created status for successful task addition
+                dispatch({ type: 'ADD_TASK', payload: newTask });
+                successMessage('Task added successfully!');
+            } else {
+                errorMessage();
+            }
         } catch (error) {
             console.error(error);
+            errorMessage();
         }
     });
 
     const [updateTask, loadingUpdate, errorUpdate] = useFetching(async (updatedTask) => {
         try {
-            const { data: res } = await DataApi.updateTask(updatedTask);
-            console.log(res, 'Response after updating task');
+            const res = await DataApi.updateTask(updatedTask);
+            if (res && res.status === 200) { // Assuming 200 OK status for successful task update
+                dispatch({ type: 'UPDATE_TASK', payload: updatedTask });
+                successMessage('Task updated successfully!');
+            } else {
+                errorMessage();
+            }
         } catch (error) {
             console.error(error);
+            errorMessage();
         }
     });
 
     const [deleteTask, loadingDelete, errorDelete] = useFetching(async (taskIdToDelete) => {
         try {
-            const { data: res } = await DataApi.deleteTask(taskIdToDelete);
-            if (res) {
-                console.log(res, 'res');
+            const res = await DataApi.deleteTask(taskIdToDelete);
+            if (res && res.status === 200) { // Assuming 200 OK status for successful task deletion
+                dispatch({ type: 'DELETE_TASK', payload: taskIdToDelete });
+                successMessage('Task deleted successfully!');
+            } else {
+                errorMessage();
             }
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error('Error deleting task:', error);
+            errorMessage();
         }
     });
+
+
+    const successMessage = (content) => {
+        messageApi.open({
+            type: 'success',
+            content,
+        });
+    };
+
+    const errorMessage = () => {
+        messageApi.open({
+            type: 'error',
+            content: 'An error occurred. Please try again.',
+        });
+    };
 
     const priorityOrder = { Low: 3, Normal: 2, High: 1 };
 
     const handleOpenAddDialog = () => setAddDialogOpen(true);
     const handleCloseAddDialog = () => setAddDialogOpen(false);
     const handleOpenEditDialog = (taskId) => {
-        const task = tasks.find((task) => task.id === taskId);
+        const task = state.tasks.find((task) => task.id === taskId);
         setEditTask({ ...task });
         setEditDialogOpen(true);
     };
@@ -109,7 +166,6 @@ const Task = () => {
                 ...newTask,
                 progress: newTask.progress,
             };
-            setTasks([...tasks, taskToAdd]);
             addTask(taskToAdd);
             setNewTask({ title: '', description: '', priority: 'Low', progress: 0, checked: false });
             handleCloseAddDialog();
@@ -128,7 +184,7 @@ const Task = () => {
     };
 
     const handleOpenDeleteDialog = (taskId) => {
-        const task = tasks.find((task) => task.id === taskId);
+        const task = state.tasks.find((task) => task.id === taskId);
         setTaskToDelete(task);
         setDeleteDialogOpen(true);
     };
@@ -150,15 +206,20 @@ const Task = () => {
         }
     };
 
-    const handleToggleComplete = (taskId) => {
-        const updatedTasks = tasks.map((task) =>
-            task.id === taskId ? { ...task, checked: !task.checked } : task
-        );
-        setTasks(updatedTasks);
+    const handleToggleComplete = async (taskId) => {
+        const task = state.tasks.find((task) => task.id === taskId);
+        const updatedTask = { ...task, checked: !task.checked };
 
-        const updatedTask = updatedTasks.find((task) => task.id === taskId);
-        updateTask(updatedTask);
+        try {
+            const res = await updateTask(updatedTask);
+            if (res && res.status === 200) {
+                dispatch({ type: 'UPDATE_TASK', payload: updatedTask });
+            }
+        } catch (error) {
+            console.error('Error updating task:', error);
+        }
     };
+
 
     const handleChangePage = (event, newPage) => setPage(newPage);
     const handleChangeRowsPerPage = (event) => {
@@ -173,12 +234,13 @@ const Task = () => {
         return 'success';
     };
 
-    const filteredTasks = tasks.filter((task) =>
+    const filteredTasks = state.tasks.filter((task) =>
         task.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
         <div style={{ padding: 20 }}>
+            {contextHolder}
             <Typography style={{ color: '#3f51b5', fontWeight: 'bold' }} variant="h4" gutterBottom>
                 Task Management
             </Typography>
@@ -219,7 +281,7 @@ const Task = () => {
                                         <TableRow key={task.id} style={{ textDecoration: task.checked ? 'line-through' : 'none' }}>
                                             <TableCell>
                                                 <Checkbox
-                                                    checked={task.checked || false}  // Ensure task.checked is defined
+                                                    checked={task.checked || false}
                                                     onChange={() => handleToggleComplete(task.id)}
                                                 />
                                             </TableCell>
@@ -235,10 +297,10 @@ const Task = () => {
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <IconButton edge="end" aria-label="edit" onClick={() => handleOpenEditDialog(task.id)}>
+                                                <IconButton color="primary" onClick={() => handleOpenEditDialog(task.id)}>
                                                     <EditIcon />
                                                 </IconButton>
-                                                <IconButton edge="end" aria-label="delete" onClick={() => handleOpenDeleteDialog(task.id)}>
+                                                <IconButton color="secondary" onClick={() => handleOpenDeleteDialog(task.id)}>
                                                     <DeleteIcon />
                                                 </IconButton>
                                             </TableCell>
@@ -258,17 +320,14 @@ const Task = () => {
                     </TableContainer>
                 </CardContent>
             </Card>
-
-            {/* Add Task Dialog */}
             <Dialog open={isAddDialogOpen} onClose={handleCloseAddDialog}>
                 <DialogTitle>Add Task</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>Enter the task details below:</DialogContentText>
+                    <DialogContentText>Please fill out the form below to add a new task.</DialogContentText>
                     <TextField
                         autoFocus
                         margin="dense"
                         label="Title"
-                        type="text"
                         fullWidth
                         value={newTask.title}
                         onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
@@ -276,7 +335,6 @@ const Task = () => {
                     <TextField
                         margin="dense"
                         label="Description"
-                        type="text"
                         fullWidth
                         value={newTask.description}
                         onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
@@ -292,20 +350,21 @@ const Task = () => {
                             <MenuItem value="High">High</MenuItem>
                         </Select>
                     </FormControl>
-                    <Box display="flex" alignItems="center" mt={2}>
-                        <Typography variant="body1" style={{ marginRight: 8 }}>
-                            Progress:
-                        </Typography>
+                    <Box mt={2}>
+                        <Typography gutterBottom>Progress</Typography>
                         <Slider
                             value={newTask.progress}
-                            onChange={(e, newValue) => setNewTask({ ...newTask, progress: newValue })}
-                            aria-labelledby="progress-slider"
+                            onChange={(e, value) => setNewTask({ ...newTask, progress: value })}
                             valueLabelDisplay="auto"
+                            step={10}
+                            marks
+                            min={0}
+                            max={100}
                         />
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseAddDialog} color="secondary">
+                    <Button onClick={handleCloseAddDialog} color="primary">
                         Cancel
                     </Button>
                     <Button onClick={handleAddTask} color="primary">
@@ -313,17 +372,14 @@ const Task = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
-            {/* Edit Task Dialog */}
             <Dialog open={isEditDialogOpen} onClose={handleCloseEditDialog}>
                 <DialogTitle>Edit Task</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>Update the task details below:</DialogContentText>
+                    <DialogContentText>Please update the fields below to edit the task.</DialogContentText>
                     <TextField
                         autoFocus
                         margin="dense"
                         label="Title"
-                        type="text"
                         fullWidth
                         value={editTask.title}
                         onChange={(e) => setEditTask({ ...editTask, title: e.target.value })}
@@ -331,7 +387,6 @@ const Task = () => {
                     <TextField
                         margin="dense"
                         label="Description"
-                        type="text"
                         fullWidth
                         value={editTask.description}
                         onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
@@ -347,44 +402,45 @@ const Task = () => {
                             <MenuItem value="High">High</MenuItem>
                         </Select>
                     </FormControl>
-                    <Box display="flex" alignItems="center" mt={2}>
-                        <Typography variant="body1" style={{ marginRight: 8 }}>
-                            Progress:
-                        </Typography>
+                    <Box mt={2}>
+                        <Typography gutterBottom>Progress</Typography>
                         <Slider
                             value={editTask.progress}
-                            onChange={(e, newValue) => setEditTask({ ...editTask, progress: newValue })}
-                            aria-labelledby="progress-slider"
+                            onChange={(e, value) => setEditTask({ ...editTask, progress: value })}
                             valueLabelDisplay="auto"
+                            step={10}
+                            marks
+                            min={0}
+                            max={100}
                         />
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseEditDialog} color="secondary">
+                    <Button onClick={handleCloseEditDialog} color="primary">
                         Cancel
                     </Button>
                     <Button onClick={handleUpdateTask} color="primary">
-                        Update
+                        Save
                     </Button>
                 </DialogActions>
             </Dialog>
-
-            {/* Delete Task Dialog */}
             <Dialog open={isDeleteDialogOpen} onClose={handleCloseDeleteDialog}>
                 <DialogTitle>Delete Task</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        Are you sure you want to delete this task?
-                    </DialogContentText>
-                    <Typography variant="body1">
-                        {taskToDelete?.title}
-                    </Typography>
+                    <DialogContentText>Are you sure you want to delete this task?</DialogContentText>
+                    {taskToDelete && (
+                        <Paper style={{ padding: 16, marginTop: 16 }}>
+                            <Typography variant="h6">{taskToDelete.title}</Typography>
+                            <Typography variant="body1">{taskToDelete.description}</Typography>
+                            <Typography variant="body2">Priority: {taskToDelete.priority}</Typography>
+                        </Paper>
+                    )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseDeleteDialog} color="secondary">
+                    <Button onClick={handleCloseDeleteDialog} color="primary">
                         Cancel
                     </Button>
-                    <Button onClick={handleDeleteTask} color="primary">
+                    <Button onClick={handleDeleteTask} color="secondary">
                         Delete
                     </Button>
                 </DialogActions>
